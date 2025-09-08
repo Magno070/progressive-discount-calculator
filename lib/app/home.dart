@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:progressive_discount_test/app/discount_model.dart';
 
 class ProgressiveDiscountApp extends StatefulWidget {
   const ProgressiveDiscountApp({super.key});
@@ -15,9 +16,12 @@ class _ProgressiveDiscountAppState extends State<ProgressiveDiscountApp>
   List<TextEditingController> discountsItemsInitialRangeControllers = [];
   List<TextEditingController> discountsItemsFinalRangeControllers = [];
 
-  List<Map<String, dynamic>> discountItems = [
+  static List<Map<String, dynamic>> rawResponse = [
     {"discount": 1.0, "initialRange": 1.0, "finalRange": 100.0},
   ];
+  List<DiscountModel> discountItems = rawResponse
+      .map((json) => DiscountModel.fromJson(json))
+      .toList();
 
   @override
   void initState() {
@@ -36,15 +40,13 @@ class _ProgressiveDiscountAppState extends State<ProgressiveDiscountApp>
   void _initializeControllers() {
     for (int i = 0; i < discountItems.length; i++) {
       discountsItemsValueControllers.add(
-        TextEditingController(text: discountItems[i]['discount'].toString()),
+        TextEditingController(text: discountItems[i].discount.toString()),
       );
       discountsItemsInitialRangeControllers.add(
-        TextEditingController(
-          text: discountItems[i]['initialRange'].toString(),
-        ),
+        TextEditingController(text: discountItems[i].initialRange.toString()),
       );
       discountsItemsFinalRangeControllers.add(
-        TextEditingController(text: discountItems[i]['finalRange'].toString()),
+        TextEditingController(text: discountItems[i].finalRange.toString()),
       );
     }
   }
@@ -69,18 +71,18 @@ class _ProgressiveDiscountAppState extends State<ProgressiveDiscountApp>
   }
 
   /// Adiciona um novo item de desconto à lista e atualiza o estado.
-  void _addDiscountItem(Map<String, dynamic> newItem) {
+  void _addDiscountItem(DiscountModel newItem) {
     setState(() {
       discountItems.add(newItem);
 
       discountsItemsValueControllers.add(
-        TextEditingController(text: newItem['discount'].toString()),
+        TextEditingController(text: newItem.discount.toString()),
       );
       discountsItemsInitialRangeControllers.add(
-        TextEditingController(text: newItem['initialRange'].toString()),
+        TextEditingController(text: newItem.initialRange.toString()),
       );
       discountsItemsFinalRangeControllers.add(
-        TextEditingController(text: newItem['finalRange'].toString()),
+        TextEditingController(text: newItem.finalRange.toString()),
       );
     });
   }
@@ -135,8 +137,8 @@ class _ProgressiveDiscountAppState extends State<ProgressiveDiscountApp>
     } catch (e) {
       // Fallback em caso de erro de parse (ex: campo vazio ou texto inválido)
       final lastItem = discountItems.last;
-      newDiscount = (lastItem['discount'] as num).toDouble() + 1.0;
-      newInitialRange = (lastItem['finalRange'] as num).toDouble() + 1.0;
+      newDiscount = (lastItem.discount as num).toDouble() + 1.0;
+      newInitialRange = (lastItem.finalRange as num).toDouble() + 1.0;
       newFinalRange = newInitialRange + 99.0;
     }
 
@@ -265,11 +267,13 @@ class _ProgressiveDiscountAppState extends State<ProgressiveDiscountApp>
           child: ElevatedButton(
             onPressed: () {
               final nextValues = _calculateNextDiscountValues();
-              _addDiscountItem({
-                "discount": nextValues['discount'],
-                "initialRange": nextValues['initialRange'],
-                "finalRange": nextValues['finalRange'],
-              });
+              _addDiscountItem(
+                DiscountModel.fromJson({
+                  "discount": nextValues['discount'],
+                  "initialRange": nextValues['initialRange'],
+                  "finalRange": nextValues['finalRange'],
+                }),
+              );
             },
             child: Text('Novo desconto'),
           ),
