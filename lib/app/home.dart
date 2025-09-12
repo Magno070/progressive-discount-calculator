@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:progressive_discount_test/app/discount_model.dart';
+import 'package:progressive_discount_test/app/results.dart';
 
 class ProgressiveDiscountApp extends StatefulWidget {
   const ProgressiveDiscountApp({super.key});
@@ -15,13 +16,15 @@ class _ProgressiveDiscountAppState extends State<ProgressiveDiscountApp>
   List<TextEditingController> discountsItemsValueControllers = [];
   List<TextEditingController> discountsItemsInitialRangeControllers = [];
   List<TextEditingController> discountsItemsFinalRangeControllers = [];
+  bool isShowingResults = false;
 
-  static List<Map<String, dynamic>> rawResponse = [
-    {"discount": 1.0, "initialRange": 1.0, "finalRange": 100.0},
+  List<DiscountModel> discountItems = [
+    DiscountModel.fromJson({
+      "discount": 1.0,
+      "initialRange": 1.0,
+      "finalRange": 100.0,
+    }),
   ];
-  List<DiscountModel> discountItems = rawResponse
-      .map((json) => DiscountModel.fromJson(json))
-      .toList();
 
   @override
   void initState() {
@@ -70,7 +73,6 @@ class _ProgressiveDiscountAppState extends State<ProgressiveDiscountApp>
     }
   }
 
-  /// Adiciona um novo item de desconto à lista e atualiza o estado.
   void _addDiscountItem(DiscountModel newItem) {
     setState(() {
       discountItems.add(newItem);
@@ -87,7 +89,6 @@ class _ProgressiveDiscountAppState extends State<ProgressiveDiscountApp>
     });
   }
 
-  /// Calcula os valores do próximo item de desconto com base nos valores atuais dos TextFields.
   Map<String, double> _calculateNextDiscountValues() {
     double newDiscount;
     double newInitialRange;
@@ -135,19 +136,16 @@ class _ProgressiveDiscountAppState extends State<ProgressiveDiscountApp>
             lastFinalRange + (lastFinalRange - secondLastFinalRange);
       }
     } catch (e) {
-      // Fallback em caso de erro de parse (ex: campo vazio ou texto inválido)
       final lastItem = discountItems.last;
       newDiscount = (lastItem.discount as num).toDouble() + 1.0;
       newInitialRange = (lastItem.finalRange as num).toDouble() + 1.0;
       newFinalRange = newInitialRange + 99.0;
     }
 
-    // Garante que a faixa final seja sempre maior que a inicial
     if (newFinalRange <= newInitialRange) {
       newFinalRange = newInitialRange + 99;
     }
 
-    // Garante que o desconto não seja negativo
     if (newDiscount < 0) {
       newDiscount = 0;
     }
@@ -281,23 +279,48 @@ class _ProgressiveDiscountAppState extends State<ProgressiveDiscountApp>
       );
     }
 
-    return AnimatedBuilder(
-      animation: _discountsController,
-      builder: (context, child) => Container(
-        margin: const EdgeInsets.all(8.0),
-        padding: const EdgeInsets.all(8.0),
-        decoration: BoxDecoration(
-          border: BoxBorder.all(width: 1, color: const Color(0xFF9E9E9E)),
-        ),
-        height: _discountsHeigthAnimation.value,
-        width: 240,
-        child: Column(
-          children: [
-            label(),
-            Expanded(child: discountsBuilder()),
-            addDiscountTile(),
-          ],
-        ),
+    return Scaffold(
+      body: Row(
+        children: [
+          AnimatedBuilder(
+            animation: _discountsController,
+            builder: (context, child) => Container(
+              margin: const EdgeInsets.all(8.0),
+              padding: const EdgeInsets.all(8.0),
+              decoration: BoxDecoration(
+                border: BoxBorder.all(width: 1, color: const Color(0xFF9E9E9E)),
+              ),
+              height: _discountsHeigthAnimation.value,
+              width: 240,
+              child: Column(
+                children: [
+                  label(),
+                  Expanded(child: discountsBuilder()),
+                  addDiscountTile(),
+                ],
+              ),
+            ),
+          ),
+          if (isShowingResults)
+            Expanded(child: ResultsContainer(values: discountItems))
+          else
+            Align(
+              alignment: Alignment.topLeft,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: ElevatedButton(
+                  onPressed: () => setState(() {
+                    isShowingResults = true;
+                  }),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: Text("Calcular"),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
