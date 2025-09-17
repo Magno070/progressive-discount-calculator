@@ -1,8 +1,8 @@
 class DiscountModel {
-  final double discount;
-  final int initialRange;
-  final int finalRange;
-  const DiscountModel({
+  double discount;
+  int initialRange;
+  int finalRange;
+  DiscountModel({
     required this.discount,
     required this.initialRange,
     required this.finalRange,

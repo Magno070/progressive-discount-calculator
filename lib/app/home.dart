@@ -9,126 +9,99 @@ class ProgressiveDiscountApp extends StatefulWidget {
   State<ProgressiveDiscountApp> createState() => _ProgressiveDiscountAppState();
 }
 
-class _ProgressiveDiscountAppState extends State<ProgressiveDiscountApp>
-    with TickerProviderStateMixin {
-  late AnimationController _discountsController;
-  late Animation<double> _discountsHeigthAnimation;
-  List<TextEditingController> discountsItemsValueControllers = [];
-  List<TextEditingController> discountsItemsInitialRangeControllers = [];
-  List<TextEditingController> discountsItemsFinalRangeControllers = [];
-  bool isShowingResults = false;
-
+class _ProgressiveDiscountAppState extends State<ProgressiveDiscountApp> {
+  final _formKey = GlobalKey<FormState>(); // Chave para o formulário
+  final TextEditingController initialPriceController = TextEditingController(
+    text: 1.toString(),
+  );
   List<DiscountModel> discountItems = [
     DiscountModel.fromJson({
       "discount": 1.0,
-      "initialRange": 1.0,
-      "finalRange": 100.0,
+      "initialRange": 1,
+      "finalRange": 100,
     }),
   ];
+  bool isShowingResults = false;
+
+  final List<TextEditingController> _discountValueControllers = [];
+  final List<TextEditingController> _initialRangeControllers = [];
+  final List<TextEditingController> _finalRangeControllers = [];
 
   @override
   void initState() {
-    _initializeDiscountsAnimation();
-    _initializeControllers();
     super.initState();
+    _initializeControllers();
   }
 
   @override
   void dispose() {
-    _discountsController.dispose();
     _disposeControllers();
+    initialPriceController.dispose();
     super.dispose();
   }
 
   void _initializeControllers() {
-    for (int i = 0; i < discountItems.length; i++) {
-      discountsItemsValueControllers.add(
-        TextEditingController(text: discountItems[i].discount.toString()),
-      );
-      discountsItemsInitialRangeControllers.add(
-        TextEditingController(text: discountItems[i].initialRange.toString()),
-      );
-      discountsItemsFinalRangeControllers.add(
-        TextEditingController(text: discountItems[i].finalRange.toString()),
-      );
+    for (var item in discountItems) {
+      _addControllersForItem(item);
     }
   }
 
-  void _initializeDiscountsAnimation() {
-    _discountsController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2000),
+  void _addControllersForItem(DiscountModel item) {
+    _discountValueControllers.add(
+      TextEditingController(text: item.discount.toString()),
     );
-    _discountsHeigthAnimation = Tween<double>(begin: 0.0, end: 1000).animate(
-      CurvedAnimation(parent: _discountsController, curve: Curves.bounceOut),
+    _initialRangeControllers.add(
+      TextEditingController(text: item.initialRange.toString()),
     );
-    _discountsController.forward();
+    _finalRangeControllers.add(
+      TextEditingController(text: item.finalRange.toString()),
+    );
   }
 
   void _disposeControllers() {
-    for (int i = 0; i < discountsItemsValueControllers.length; i++) {
-      discountsItemsValueControllers[i].dispose();
-      discountsItemsInitialRangeControllers[i].dispose();
-      discountsItemsFinalRangeControllers[i].dispose();
+    for (var controller in _discountValueControllers) {
+      controller.dispose();
+    }
+    for (var controller in _initialRangeControllers) {
+      controller.dispose();
+    }
+    for (var controller in _finalRangeControllers) {
+      controller.dispose();
     }
   }
 
   void _addDiscountItem(DiscountModel newItem) {
     setState(() {
       discountItems.add(newItem);
-
-      discountsItemsValueControllers.add(
-        TextEditingController(text: newItem.discount.toString()),
-      );
-      discountsItemsInitialRangeControllers.add(
-        TextEditingController(text: newItem.initialRange.toString()),
-      );
-      discountsItemsFinalRangeControllers.add(
-        TextEditingController(text: newItem.finalRange.toString()),
-      );
+      _addControllersForItem(newItem);
     });
   }
 
-  Map<String, double> _calculateNextDiscountValues() {
+  Map<String, dynamic> _calculateNextDiscountValues() {
     double newDiscount;
-    double newInitialRange;
-    double newFinalRange;
+    int newInitialRange;
+    int newFinalRange;
 
     try {
-      if (discountsItemsValueControllers.isEmpty) {
+      if (discountItems.isEmpty) {
         newDiscount = 1;
         newInitialRange = 1;
         newFinalRange = 100;
-      } else if (discountsItemsValueControllers.length == 1) {
-        final lastDiscount = double.parse(
-          discountsItemsValueControllers.last.text,
-        );
-        final lastFinalRange = double.parse(
-          discountsItemsFinalRangeControllers.last.text,
-        );
+      } else if (discountItems.length == 1) {
+        final lastDiscount = discountItems.last.discount;
+        final lastFinalRange = discountItems.last.finalRange;
 
         newDiscount = lastDiscount * 2;
         newInitialRange = lastFinalRange + 1;
         newFinalRange = lastFinalRange * 2;
       } else {
-        final lastDiscount = double.parse(
-          discountsItemsValueControllers.last.text,
-        );
-        final secondLastDiscount = double.parse(
-          discountsItemsValueControllers[discountsItemsValueControllers.length -
-                  2]
-              .text,
-        );
+        final lastDiscount = discountItems.last.discount;
+        final secondLastDiscount =
+            discountItems[discountItems.length - 2].discount;
 
-        final lastFinalRange = double.parse(
-          discountsItemsFinalRangeControllers.last.text,
-        );
-        final secondLastFinalRange = double.parse(
-          discountsItemsFinalRangeControllers[discountsItemsFinalRangeControllers
-                      .length -
-                  2]
-              .text,
-        );
+        final lastFinalRange = discountItems.last.finalRange;
+        final secondLastFinalRange =
+            discountItems[discountItems.length - 2].finalRange;
 
         newDiscount = lastDiscount + (lastDiscount - secondLastDiscount);
         newInitialRange = lastFinalRange + 1;
@@ -137,9 +110,9 @@ class _ProgressiveDiscountAppState extends State<ProgressiveDiscountApp>
       }
     } catch (e) {
       final lastItem = discountItems.last;
-      newDiscount = (lastItem.discount as num).toDouble() + 1.0;
-      newInitialRange = (lastItem.finalRange as num).toDouble() + 1.0;
-      newFinalRange = newInitialRange + 99.0;
+      newDiscount = lastItem.discount + 1;
+      newInitialRange = lastItem.finalRange + 1;
+      newFinalRange = newInitialRange + 99;
     }
 
     if (newFinalRange <= newInitialRange) {
@@ -176,7 +149,7 @@ class _ProgressiveDiscountAppState extends State<ProgressiveDiscountApp>
     Column label() => Column(
       children: [
         Text(
-          'Inserir descontos',
+          'Inserir faixas de descontos',
           style: TextStyle(color: const Color(0xFF111111), fontSize: 22),
         ),
         Divider(thickness: 1, color: const Color(0xFF9E9E9E)),
@@ -184,8 +157,27 @@ class _ProgressiveDiscountAppState extends State<ProgressiveDiscountApp>
           width: double.infinity,
           child: Row(
             children: [
-              Expanded(child: Text("Quantidade", textAlign: TextAlign.start)),
-              Expanded(child: Text("Desconto", textAlign: TextAlign.end)),
+              Expanded(
+                flex: 2,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Center(
+                        child: Text("Início", textAlign: TextAlign.start),
+                      ),
+                    ),
+                    Expanded(
+                      child: Center(
+                        child: Text("Fim", textAlign: TextAlign.start),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                flex: 1,
+                child: Text("Desconto", textAlign: TextAlign.end),
+              ),
             ],
           ),
         ),
@@ -193,11 +185,7 @@ class _ProgressiveDiscountAppState extends State<ProgressiveDiscountApp>
     );
 
     Widget discountsBuilder() {
-      Widget discountTile({
-        required TextEditingController valueController,
-        required TextEditingController initialRangeController,
-        required TextEditingController finalRangeController,
-      }) {
+      Widget discountTile({required int index}) {
         return Padding(
           padding: const EdgeInsets.only(top: 4),
           child: SizedBox(
@@ -210,16 +198,26 @@ class _ProgressiveDiscountAppState extends State<ProgressiveDiscountApp>
                   child: Row(
                     children: [
                       Expanded(
-                        child: TextField(
-                          controller: initialRangeController,
+                        child: TextFormField(
+                          controller: _initialRangeControllers[index],
+                          onChanged: (text) {
+                            discountItems[index].initialRange =
+                                int.tryParse(text) ?? 0;
+                          },
                           textAlign: TextAlign.center,
+                          keyboardType: TextInputType.number,
                         ),
                       ),
                       VerticalDivider(color: const Color(0xFF9E9E9E)),
                       Expanded(
-                        child: TextField(
-                          controller: finalRangeController,
+                        child: TextFormField(
+                          controller: _finalRangeControllers[index],
+                          onChanged: (text) {
+                            discountItems[index].finalRange =
+                                int.tryParse(text) ?? 0;
+                          },
                           textAlign: TextAlign.center,
+                          keyboardType: TextInputType.number,
                         ),
                       ),
                     ],
@@ -227,7 +225,7 @@ class _ProgressiveDiscountAppState extends State<ProgressiveDiscountApp>
                 ),
                 SizedBox(width: 8),
                 Expanded(
-                  child: TextField(
+                  child: TextFormField(
                     textAlign: TextAlign.end,
                     decoration: InputDecoration(
                       suffix: Text("%"),
@@ -235,7 +233,14 @@ class _ProgressiveDiscountAppState extends State<ProgressiveDiscountApp>
                         borderSide: BorderSide(color: const Color(0xFF9E9E9E)),
                       ),
                     ),
-                    controller: valueController,
+                    controller: _discountValueControllers[index],
+                    onChanged: (text) {
+                      discountItems[index].discount =
+                          double.tryParse(text) ?? 0.0;
+                    },
+                    keyboardType: TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                   ),
                 ),
               ],
@@ -247,12 +252,7 @@ class _ProgressiveDiscountAppState extends State<ProgressiveDiscountApp>
       return ListView.builder(
         itemCount: discountItems.length,
         itemBuilder: (context, index) {
-          return discountTile(
-            valueController: discountsItemsValueControllers[index],
-            initialRangeController:
-                discountsItemsInitialRangeControllers[index],
-            finalRangeController: discountsItemsFinalRangeControllers[index],
-          );
+          return discountTile(index: index);
         },
       );
     }
@@ -268,8 +268,8 @@ class _ProgressiveDiscountAppState extends State<ProgressiveDiscountApp>
               _addDiscountItem(
                 DiscountModel.fromJson({
                   "discount": nextValues['discount'],
-                  "initialRange": nextValues['initialRange'],
-                  "finalRange": nextValues['finalRange'],
+                  "initialRange": nextValues['initialRange']?.toInt(),
+                  "finalRange": nextValues['finalRange']?.toInt(),
                 }),
               );
             },
@@ -280,38 +280,72 @@ class _ProgressiveDiscountAppState extends State<ProgressiveDiscountApp>
     }
 
     return Scaffold(
+      backgroundColor: const Color(0xFFEBEBEB),
       body: Row(
         children: [
-          AnimatedBuilder(
-            animation: _discountsController,
-            builder: (context, child) => Container(
-              margin: const EdgeInsets.all(8.0),
-              padding: const EdgeInsets.all(8.0),
-              decoration: BoxDecoration(
-                border: BoxBorder.all(width: 1, color: const Color(0xFF9E9E9E)),
-              ),
-              height: _discountsHeigthAnimation.value,
-              width: 240,
+          Container(
+            margin: const EdgeInsets.all(8.0),
+            padding: const EdgeInsets.all(8.0),
+            decoration: BoxDecoration(
+              border: Border.all(width: 1, color: const Color(0xFF9E9E9E)),
+            ),
+            width: 230,
+            child: Form(
+              key: _formKey,
               child: Column(
                 children: [
                   label(),
                   Expanded(child: discountsBuilder()),
                   addDiscountTile(),
+                  TextFormField(
+                    controller: initialPriceController,
+                    decoration: InputDecoration(labelText: 'Preço Inicial'),
+                    keyboardType: TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Por favor, insira um valor';
+                      }
+                      if (double.tryParse(value) == null) {
+                        return 'Por favor, insira um número válido';
+                      }
+                      return null;
+                    },
+                  ),
                 ],
               ),
             ),
           ),
           if (isShowingResults)
-            Expanded(child: ResultsContainer(values: discountItems))
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(0, 8, 8, 8),
+                child: ResultsContainer(
+                  values: discountItems,
+                  initialPrice:
+                      double.tryParse(initialPriceController.text) ?? 1.0,
+                  itemsAmount: discountItems.isNotEmpty
+                      ? discountItems.last.finalRange -
+                            discountItems.first.initialRange +
+                            1
+                      : 0,
+                ),
+              ),
+            )
           else
             Align(
               alignment: Alignment.topLeft,
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: ElevatedButton(
-                  onPressed: () => setState(() {
-                    isShowingResults = true;
-                  }),
+                  onPressed: () {
+                    if (_formKey.currentState!.validate()) {
+                      setState(() {
+                        isShowingResults = true;
+                      });
+                    }
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green,
                     foregroundColor: Colors.white,
